@@ -74,6 +74,12 @@ node cf-worker/tools/build-one-line-worker.mjs
 | `SUDOKU_PREFERRED_IP_CACHE_MS` | `60000` | 远程优选列表缓存毫秒数，默认 60 秒 |
 | `SUDOKU_PREFERRED_IP_KV_KEY` | `sudoku:preferred_ips` | 可选，KV 中保存优选池的 key |
 | `SUDOKU_ENABLE_BUILTIN_PREFERRED` | `true` | 默认开启内置优选；未显式配置优选源时，会自动抓取可直接使用的 Cloudflare 优选 IP 列表，失败时回退到你的域名 |
+| `SUDOKU_ENABLE_PREFERRED_PROBE` | `true` | 导出短链接前主动探测候选入口，按延迟、P95、失败次数和估算吞吐综合选择最优 |
+| `SUDOKU_PREFERRED_PROBE_ROUNDS` | `2` | 每个候选的探测轮数，范围 `1-5` |
+| `SUDOKU_PREFERRED_PROBE_TIMEOUT_MS` | `1800` | 单次探测超时，范围 `300-8000` 毫秒 |
+| `SUDOKU_PREFERRED_PROBE_MAX` | `16` | 每次最多探测静态排序靠前的候选数 |
+| `SUDOKU_PREFERRED_PROBE_CONCURRENCY` | `6` | 探测并发数 |
+| `SUDOKU_PREFERRED_PROBE_CACHE_MS` | `300000` | 探测结果缓存毫秒数，避免每次打开短链都重新测速 |
 | `SUDOKU_CLIENT_PORT` | `10233` | 导出的客户端本地 mixed 端口 |
 | `SUDOKU_HTTP_MASK_HOST` | `cdn.example.com` | 可选，覆盖客户端 Host/SNI |
 | `SUDOKU_NODE_NAME` | `sudoku-cf-worker-pure` | Clash 节点名 |
@@ -145,4 +151,15 @@ node cf-worker/tools/build-shortlink.mjs \
   --packed-downlink true \
   --mux on \
   --node-name sudoku-cf-worker-packed
+```
+
+自动优选并输出短链接：
+
+```bash
+node cf-worker/tools/build-shortlink.mjs \
+  --host sudoku.example.com \
+  --key 'my-shared-key' \
+  --preferred-auto true \
+  --aead none \
+  --packed-downlink true
 ```

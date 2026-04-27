@@ -123,6 +123,9 @@ export function buildOpenTcpMessage(targetAddress) {
 }
 
 function toBase64Url(input) {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(input, "utf8").toString("base64url");
+  }
   const bytes = new TextEncoder().encode(input);
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) {

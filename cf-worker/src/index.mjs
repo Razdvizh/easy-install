@@ -1,7 +1,7 @@
 import { connect } from "cloudflare:sockets";
 
 import { buildClientConfig, buildClashNode, buildShortLinkFromClientConfig, buildWSPath, resolvePathRoot } from "./sudoku-config.mjs";
-import { filterPreferredEntries, loadPreferredIpPool, normalizePreferredIpStrategy, parsePreferredIpList, pickPreferredEntry } from "./preferred-ip.mjs";
+import { filterPreferredEntries, loadPreferredIpPool, normalizePreferredIpStrategy, parsePreferredIpList, pickPreferredEntryWithProbe } from "./preferred-ip.mjs";
 import { PackedDownlinkEncoder } from "./sudoku-packed.mjs";
 import {
   ByteQueue,
@@ -101,6 +101,12 @@ async function loadSettings(env, requestUrl) {
   const enablePreferredDomains = parseBoolean(env.SUDOKU_ENABLE_PREFERRED_DOMAIN || env.SUDOKU_EPD, true);
   const preferredIpCacheMs = Math.max(0, Number.parseInt(String(env.SUDOKU_PREFERRED_IP_CACHE_MS || env.SUDOKU_YX_CACHE_MS || "60000"), 10) || 0);
   const enableBuiltInPreferred = parseBoolean(env.SUDOKU_ENABLE_BUILTIN_PREFERRED ?? env.SUDOKU_EGI, true);
+  const enablePreferredProbe = parseBoolean(env.SUDOKU_ENABLE_PREFERRED_PROBE ?? env.SUDOKU_YX_PROBE, true);
+  const preferredProbeRounds = Math.max(1, Math.min(5, Number.parseInt(String(env.SUDOKU_PREFERRED_PROBE_ROUNDS || env.SUDOKU_YX_ROUNDS || "2"), 10) || 2));
+  const preferredProbeTimeoutMs = Math.max(300, Math.min(8000, Number.parseInt(String(env.SUDOKU_PREFERRED_PROBE_TIMEOUT_MS || env.SUDOKU_YX_TIMEOUT_MS || "1800"), 10) || 1800));
+  const preferredProbeMax = Math.max(1, Math.min(64, Number.parseInt(String(env.SUDOKU_PREFERRED_PROBE_MAX || env.SUDOKU_YX_PROBE_MAX || "16"), 10) || 16));
+  const preferredProbeConcurrency = Math.max(1, Math.min(16, Number.parseInt(String(env.SUDOKU_PREFERRED_PROBE_CONCURRENCY || env.SUDOKU_YX_PROBE_CONCURRENCY || "6"), 10) || 6));
+  const preferredProbeCacheMs = Math.max(0, Math.min(3600000, Number.parseInt(String(env.SUDOKU_PREFERRED_PROBE_CACHE_MS || env.SUDOKU_YX_PROBE_CACHE_MS || "300000"), 10) || 300000));
   const uplinkTable = await buildSudokuTable(sharedKey, ascii, customTable);
   const downlinkTable = oppositeDirection(uplinkTable);
 
@@ -123,6 +129,12 @@ async function loadSettings(env, requestUrl) {
     enablePreferredDomains,
     preferredIpCacheMs,
     enableBuiltInPreferred,
+    enablePreferredProbe,
+    preferredProbeRounds,
+    preferredProbeTimeoutMs,
+    preferredProbeMax,
+    preferredProbeConcurrency,
+    preferredProbeCacheMs,
     preferredKv: env.C || env.SUDOKU_KV || null,
     preferredKvKey: String(env.SUDOKU_PREFERRED_IP_KV_KEY || "sudoku:preferred_ips").trim() || "sudoku:preferred_ips",
     nodeName: String(env.SUDOKU_NODE_NAME || "sudoku-cf-worker-pure").trim() || "sudoku-cf-worker-pure",
@@ -157,10 +169,18 @@ async function resolveExportBundle(settings, request) {
         enableDomains: settings.enablePreferredDomains,
         region: effectiveRegion,
       });
-  const selectedPreferred = pickPreferredEntry(
+  const selectedPreferred = await pickPreferredEntryWithProbe(
     eligibleEntries,
     settings.preferredIpStrategy,
     `${request.headers.get("cf-connecting-ip") || ""}|${request.headers.get("user-agent") || ""}`,
+    {
+      enabled: settings.enablePreferredProbe,
+      rounds: settings.preferredProbeRounds,
+      timeoutMs: settings.preferredProbeTimeoutMs,
+      maxCandidates: settings.preferredProbeMax,
+      concurrency: settings.preferredProbeConcurrency,
+      cacheTtlMs: settings.preferredProbeCacheMs,
+    },
   );
   const clientConfig = buildClientConfig({
     publicHost: settings.publicHost,
@@ -184,11 +204,12 @@ async function resolveExportBundle(settings, request) {
     preferredSource: preferredPool.preferredSource,
     preferredError: preferredPool.preferredError,
     effectiveRegion,
+    preferredProbeEnabled: settings.enablePreferredProbe,
   };
 }
 
 function renderPage(settings, requestUrl, exportBundle) {
-  const { clientConfig, clashNode, shortLink, selectedPreferred, preferredCount, preferredTotalCount, preferredSource, preferredError, effectiveRegion } = exportBundle;
+  const { clientConfig, clashNode, shortLink, selectedPreferred, preferredCount, preferredTotalCount, preferredSource, preferredError, effectiveRegion, preferredProbeEnabled } = exportBundle;
   const clientJson = JSON.stringify(clientConfig, null, 2);
   const url = new URL(requestUrl);
   const base = configBase(url.origin, settings.manageToken);
@@ -197,8 +218,13 @@ function renderPage(settings, requestUrl, exportBundle) {
   const exportHint = selectedPreferred
     ? `当前导出节点使用优选入口 <code>${htmlEscape(exportTarget)}</code>，并自动把 <code>Host/SNI</code> 设为 <code>${htmlEscape(clientConfig.httpmask.host || settings.publicHost)}</code>。`
     : "当前导出节点直接使用你的域名作为入口。";
+  const probeMeta = selectedPreferred?.probe
+    ? `，探测 <code>${htmlEscape(selectedPreferred.probe.rounds)}x</code>，平均 <code>${htmlEscape(selectedPreferred.probe.latencyMs ?? "-")}ms</code>，P95 <code>${htmlEscape(selectedPreferred.probe.p95LatencyMs)}ms</code>，估算 <code>${htmlEscape(selectedPreferred.probe.downloadMbps)}Mbps</code>，分数 <code>${htmlEscape(selectedPreferred.score)}</code>`
+    : preferredProbeEnabled
+      ? "，主动探测无可用结果，已按静态分数回退"
+      : "";
   const preferredMeta = preferredCount > 0
-    ? `优选池可用 ${preferredCount} 条 / 总计 ${preferredTotalCount} 条，策略 <code>${htmlEscape(settings.preferredIpStrategy)}</code>${effectiveRegion ? `，地区过滤 <code>${htmlEscape(effectiveRegion)}</code>` : ""}${preferredSource ? `，来源 <code>${htmlEscape(preferredSource)}</code>` : ""}。`
+    ? `优选池可用 ${preferredCount} 条 / 总计 ${preferredTotalCount} 条，策略 <code>${htmlEscape(settings.preferredIpStrategy)}</code>${effectiveRegion ? `，地区过滤 <code>${htmlEscape(effectiveRegion)}</code>` : ""}${preferredSource ? `，来源 <code>${htmlEscape(preferredSource)}</code>` : ""}${probeMeta}。`
     : preferredError
       ? `优选池不可用，已回退到域名直连。错误：<code>${htmlEscape(preferredError)}</code>`
       : settings.enableBuiltInPreferred

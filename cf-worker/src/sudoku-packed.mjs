@@ -1,8 +1,10 @@
 const PACKED_PROTECTED_PREFIX_BYTES = 14;
-const PROB_ONE = 1n << 32n;
+const UINT32_RANGE = 0x100000000;
+const randomScratch = new Uint32Array(1);
 
 function randomUint32() {
-  return crypto.getRandomValues(new Uint32Array(1))[0] >>> 0;
+  crypto.getRandomValues(randomScratch);
+  return randomScratch[0] >>> 0;
 }
 
 function randomInt(max) {
@@ -20,16 +22,16 @@ function pickPaddingThreshold(pMin, pMax) {
   if (max < min) max = min;
   if (min > 100) min = 100;
   if (max > 100) max = 100;
-  const minThreshold = (BigInt(min) * PROB_ONE) / 100n;
-  const maxThreshold = (BigInt(max) * PROB_ONE) / 100n;
+  const minThreshold = Math.floor((min * UINT32_RANGE) / 100);
+  const maxThreshold = Math.floor((max * UINT32_RANGE) / 100);
   if (maxThreshold <= minThreshold) return minThreshold;
-  return minThreshold + ((BigInt(randomUint32()) * (maxThreshold - minThreshold)) >> 32n);
+  return minThreshold + Math.floor((randomUint32() / UINT32_RANGE) * (maxThreshold - minThreshold));
 }
 
 function shouldPad(threshold) {
-  if (threshold <= 0n) return false;
-  if (threshold >= PROB_ONE) return true;
-  return BigInt(randomUint32()) < threshold;
+  if (threshold <= 0) return false;
+  if (threshold >= UINT32_RANGE) return true;
+  return randomUint32() < threshold;
 }
 
 export class PackedDownlinkEncoder {
@@ -42,8 +44,8 @@ export class PackedDownlinkEncoder {
     this.padPool = Array.from(table.paddingPool).filter((b) => b !== this.padMarker);
     if (this.padPool.length === 0) this.padPool = [this.padMarker];
     this.paddingThreshold = pickPaddingThreshold(pMin, pMax);
-    this.paddingEnabled = this.paddingThreshold > 0n;
-    this.bitBuf = 0n;
+    this.paddingEnabled = this.paddingThreshold > 0;
+    this.bitBuf = 0;
     this.bitCount = 0;
   }
 
@@ -72,21 +74,21 @@ export class PackedDownlinkEncoder {
     let gap = this.nextProtectedPrefixGap();
     let effective = 0;
     for (let i = 0; i < limit; i += 1) {
-      this.bitBuf = (this.bitBuf << 8n) | BigInt(bytes[i]);
+      this.bitBuf = (this.bitBuf << 8) | bytes[i];
       this.bitCount += 8;
       while (this.bitCount >= 6) {
         this.bitCount -= 6;
-        const group = Number((this.bitBuf >> BigInt(this.bitCount)) & 0x3fn);
+        const group = (this.bitBuf >> this.bitCount) & 0x3f;
         if (this.bitCount === 0) {
-          this.bitBuf = 0n;
+          this.bitBuf = 0;
         } else {
-          this.bitBuf &= (1n << BigInt(this.bitCount)) - 1n;
+          this.bitBuf &= (1 << this.bitCount) - 1;
         }
         this.appendGroup(out, group);
       }
       effective += 1;
       if (effective >= gap) {
-      this.appendForcedPadding(out);
+        this.appendForcedPadding(out);
         effective = 0;
         gap = this.nextProtectedPrefixGap();
       }
@@ -102,16 +104,16 @@ export class PackedDownlinkEncoder {
 
     while (this.bitCount > 0 && index < n) {
       this.maybeAddPadding(out);
-      this.bitBuf = (this.bitBuf << 8n) | BigInt(bytes[index]);
+      this.bitBuf = (this.bitBuf << 8) | bytes[index];
       index += 1;
       this.bitCount += 8;
       while (this.bitCount >= 6) {
         this.bitCount -= 6;
-        const group = Number((this.bitBuf >> BigInt(this.bitCount)) & 0x3fn);
+        const group = (this.bitBuf >> this.bitCount) & 0x3f;
         if (this.bitCount === 0) {
-          this.bitBuf = 0n;
+          this.bitBuf = 0;
         } else {
-          this.bitBuf &= (1n << BigInt(this.bitCount)) - 1n;
+          this.bitBuf &= (1 << this.bitCount) - 1;
         }
         this.appendGroup(out, group);
       }
@@ -142,24 +144,24 @@ export class PackedDownlinkEncoder {
     }
 
     while (index < n) {
-      this.bitBuf = (this.bitBuf << 8n) | BigInt(bytes[index]);
+      this.bitBuf = (this.bitBuf << 8) | bytes[index];
       this.bitCount += 8;
       index += 1;
       while (this.bitCount >= 6) {
         this.bitCount -= 6;
-        const group = Number((this.bitBuf >> BigInt(this.bitCount)) & 0x3fn);
+        const group = (this.bitBuf >> this.bitCount) & 0x3f;
         if (this.bitCount === 0) {
-          this.bitBuf = 0n;
+          this.bitBuf = 0;
         } else {
-          this.bitBuf &= (1n << BigInt(this.bitCount)) - 1n;
+          this.bitBuf &= (1 << this.bitCount) - 1;
         }
         this.appendGroup(out, group);
       }
     }
 
     if (this.bitCount > 0) {
-      const group = Number((this.bitBuf << BigInt(6 - this.bitCount)) & 0x3fn);
-      this.bitBuf = 0n;
+      const group = (this.bitBuf << (6 - this.bitCount)) & 0x3f;
+      this.bitBuf = 0;
       this.bitCount = 0;
       this.appendGroup(out, group);
       out.push(this.padMarker);
@@ -172,8 +174,8 @@ export class PackedDownlinkEncoder {
   flush() {
     const out = [];
     if (this.bitCount > 0) {
-      const group = Number((this.bitBuf << BigInt(6 - this.bitCount)) & 0x3fn);
-      this.bitBuf = 0n;
+      const group = (this.bitBuf << (6 - this.bitCount)) & 0x3f;
+      this.bitBuf = 0;
       this.bitCount = 0;
       out.push(this.table.encodeGroup(group));
       out.push(this.padMarker);

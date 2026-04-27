@@ -33,6 +33,9 @@ function generateAllGrids() {
   if (allGridsCache) return allGridsCache;
   const grids = [];
   const grid = new Uint8Array(16);
+  const rowMasks = new Uint8Array(4);
+  const colMasks = new Uint8Array(4);
+  const boxMasks = new Uint8Array(4);
 
   function backtrack(idx) {
     if (idx === 16) {
@@ -41,31 +44,20 @@ function generateAllGrids() {
     }
     const row = (idx / 4) | 0;
     const col = idx % 4;
-    const br = ((row / 2) | 0) * 2;
-    const bc = ((col / 2) | 0) * 2;
+    const box = ((row >> 1) << 1) | (col >> 1);
+    const used = rowMasks[row] | colMasks[col] | boxMasks[box];
     for (let num = 1; num <= 4; num += 1) {
-      let valid = true;
-      for (let i = 0; i < 4; i += 1) {
-        if (grid[row * 4 + i] === num || grid[i * 4 + col] === num) {
-          valid = false;
-          break;
-        }
-      }
-      if (valid) {
-        for (let r = 0; r < 2 && valid; r += 1) {
-          for (let c = 0; c < 2; c += 1) {
-            if (grid[(br + r) * 4 + bc + c] === num) {
-              valid = false;
-              break;
-            }
-          }
-        }
-      }
-      if (valid) {
-        grid[idx] = num;
-        backtrack(idx + 1);
-        grid[idx] = 0;
-      }
+      const bit = 1 << num;
+      if (used & bit) continue;
+      grid[idx] = num;
+      rowMasks[row] |= bit;
+      colMasks[col] |= bit;
+      boxMasks[box] |= bit;
+      backtrack(idx + 1);
+      rowMasks[row] ^= bit;
+      colMasks[col] ^= bit;
+      boxMasks[box] ^= bit;
+      grid[idx] = 0;
     }
   }
 
@@ -74,17 +66,34 @@ function generateAllGrids() {
   return grids;
 }
 
-function hasUniqueMatch(grids, targetGrid, positions) {
-  let matches = 0;
-  outer: for (const grid of grids) {
-    for (let i = 0; i < 4; i += 1) {
-      const pos = positions[i];
-      if (grid[pos] !== targetGrid[pos]) continue outer;
-    }
-    matches += 1;
-    if (matches > 1) return false;
+function buildHintByteLookup(layout) {
+  const lookup = new Uint8Array(256);
+  for (let b = 0; b < 256; b += 1) {
+    lookup[b] = layout.isHint(b) ? 1 : 0;
   }
-  return matches === 1;
+  return lookup;
+}
+
+function hintKeyForGrid(layout, grid, positions) {
+  const p0 = positions[0];
+  const p1 = positions[1];
+  const p2 = positions[2];
+  const p3 = positions[3];
+  return packHintsToKey(
+    layout.encodeHint(grid[p0] - 1, p0),
+    layout.encodeHint(grid[p1] - 1, p1),
+    layout.encodeHint(grid[p2] - 1, p2),
+    layout.encodeHint(grid[p3] - 1, p3),
+  );
+}
+
+function buildHintsForGrid(layout, grid, positions) {
+  const hints = new Uint8Array(4);
+  for (let i = 0; i < 4; i += 1) {
+    const pos = positions[i];
+    hints[i] = layout.encodeHint(grid[pos] - 1, pos);
+  }
+  return hints;
 }
 
 function normalizeAsciiModeToken(token) {
@@ -285,20 +294,31 @@ async function buildSingleDirectionTable(key, mode = "prefer_entropy", customPat
   });
 
   const encodeTable = Array.from({ length: 256 }, () => []);
+  const encodeHints = new Uint8Array(256 * 4);
   const decodeMap = new Map();
+  const hintCounts = new Map();
+
+  for (const positions of hintPositions) {
+    hintCounts.clear();
+    for (const grid of grids) {
+      const key = hintKeyForGrid(layout, grid, positions);
+      hintCounts.set(key, (hintCounts.get(key) || 0) + 1);
+    }
+
+    for (let byteVal = 0; byteVal < 256; byteVal += 1) {
+      const targetGrid = shuffled[byteVal];
+      const key = hintKeyForGrid(layout, targetGrid, positions);
+      if (hintCounts.get(key) !== 1) continue;
+      if (encodeTable[byteVal].length === 0) {
+        const hints = buildHintsForGrid(layout, targetGrid, positions);
+        encodeTable[byteVal].push(hints);
+        encodeHints.set(hints, byteVal * 4);
+      }
+      decodeMap.set(key, byteVal);
+    }
+  }
 
   for (let byteVal = 0; byteVal < 256; byteVal += 1) {
-    const targetGrid = shuffled[byteVal];
-    for (const positions of hintPositions) {
-      if (!hasUniqueMatch(grids, targetGrid, positions)) continue;
-      const hints = new Uint8Array(4);
-      for (let i = 0; i < 4; i += 1) {
-        const pos = positions[i];
-        hints[i] = layout.encodeHint(targetGrid[pos] - 1, pos);
-      }
-      encodeTable[byteVal].push(hints);
-      decodeMap.set(packHintsToKey(hints[0], hints[1], hints[2], hints[3]), byteVal);
-    }
     if (encodeTable[byteVal].length === 0) {
       throw new Error(`empty Sudoku encode table for byte ${byteVal}`);
     }
@@ -306,10 +326,12 @@ async function buildSingleDirectionTable(key, mode = "prefer_entropy", customPat
 
   return {
     encodeTable,
+    encodeHints,
     decodeMap,
     paddingPool: layout.paddingPool,
     padMarker: layout.padMarker,
     isHint: layout.isHint,
+    isHintByte: buildHintByteLookup(layout),
     encodeGroup: layout.encodeGroup,
     decodeGroup: layout.decodeGroup,
     isASCII: layout.name === "ascii",
@@ -356,8 +378,11 @@ export function decodeSudokuBytes(table, state, chunk) {
   let h0 = state.h0 | 0;
   let h1 = state.h1 | 0;
   let h2 = state.h2 | 0;
-  for (const b of chunk) {
-    if (!table.isHint(b)) continue;
+  const isHintByte = table.isHintByte;
+  const decodeMap = table.decodeMap;
+  for (let i = 0, n = chunk.length; i < n; i += 1) {
+    const b = chunk[i];
+    if (isHintByte ? isHintByte[b] === 0 : !table.isHint(b)) continue;
     if (hintCount === 0) {
       h0 = b;
       hintCount = 1;
@@ -375,7 +400,7 @@ export function decodeSudokuBytes(table, state, chunk) {
     }
     if (hintCount === 3) {
       const key = packHintsToKey(h0, h1, h2, b);
-      const value = table.decodeMap.get(key);
+      const value = decodeMap.get(key);
       if (value === undefined) {
         throw new Error("INVALID_SUDOKU_MAP_MISS");
       }
@@ -394,9 +419,20 @@ export function decodeSudokuBytes(table, state, chunk) {
 export function encodeSudokuBytes(table, bytes) {
   const out = new Uint8Array(bytes.length * 4);
   let offset = 0;
-  for (let i = 0; i < bytes.length; i += 1) {
-    const b = bytes[i];
-    const hints = table.encodeTable[b][0];
+  const encodeHints = table.encodeHints;
+  if (encodeHints) {
+    for (let i = 0, n = bytes.length; i < n; i += 1) {
+      const hintOffset = bytes[i] << 2;
+      out[offset] = encodeHints[hintOffset];
+      out[offset + 1] = encodeHints[hintOffset + 1];
+      out[offset + 2] = encodeHints[hintOffset + 2];
+      out[offset + 3] = encodeHints[hintOffset + 3];
+      offset += 4;
+    }
+    return out;
+  }
+  for (let i = 0, n = bytes.length; i < n; i += 1) {
+    const hints = table.encodeTable[bytes[i]][0];
     out[offset] = hints[0];
     out[offset + 1] = hints[1];
     out[offset + 2] = hints[2];

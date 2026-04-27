@@ -1,11 +1,14 @@
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const base64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const hmacKeyCache = new WeakMap();
 
 export class ByteQueue {
   constructor() {
     this.chunks = [];
     this.length = 0;
+    this.head = 0;
+    this.headOffset = 0;
   }
 
   push(chunk) {
@@ -15,13 +18,29 @@ export class ByteQueue {
     this.length += bytes.length;
   }
 
+  compact() {
+    if (this.head > 32 && this.head * 2 > this.chunks.length) {
+      this.chunks.splice(0, this.head);
+      this.head = 0;
+    }
+  }
+
   peek(size) {
     if (this.length < size) return null;
+    if (size === 0) return new Uint8Array();
+    const first = this.chunks[this.head];
+    const firstAvailable = first ? first.length - this.headOffset : 0;
+    if (firstAvailable >= size) {
+      return first.subarray(this.headOffset, this.headOffset + size);
+    }
     const out = new Uint8Array(size);
     let offset = 0;
-    for (const chunk of this.chunks) {
-      const take = Math.min(chunk.length, size - offset);
-      out.set(chunk.subarray(0, take), offset);
+    for (let i = this.head; i < this.chunks.length; i += 1) {
+      const chunk = this.chunks[i];
+      const start = i === this.head ? this.headOffset : 0;
+      const take = Math.min(chunk.length - start, size - offset);
+      if (take <= 0) continue;
+      out.set(chunk.subarray(start, start + take), offset);
       offset += take;
       if (offset === size) break;
     }
@@ -29,26 +48,54 @@ export class ByteQueue {
   }
 
   read(size) {
-    const out = this.peek(size);
-    if (!out) return null;
+    if (this.length < size) return null;
+    if (size === 0) return new Uint8Array();
+    const first = this.chunks[this.head];
+    const firstAvailable = first ? first.length - this.headOffset : 0;
+    const out = firstAvailable >= size
+      ? first.subarray(this.headOffset, this.headOffset + size)
+      : this.peek(size);
     let remaining = size;
+    this.length -= size;
     while (remaining > 0) {
-      const first = this.chunks[0];
-      if (first.length <= remaining) {
-        this.chunks.shift();
-        this.length -= first.length;
-        remaining -= first.length;
+      const chunk = this.chunks[this.head];
+      const available = chunk.length - this.headOffset;
+      if (available <= remaining) {
+        remaining -= available;
+        this.head += 1;
+        this.headOffset = 0;
       } else {
-        this.chunks[0] = first.subarray(remaining);
-        this.length -= remaining;
+        this.headOffset += remaining;
         remaining = 0;
       }
+    }
+    if (this.length === 0) {
+      this.chunks = [];
+      this.head = 0;
+      this.headOffset = 0;
+    } else {
+      this.compact();
     }
     return out;
   }
 
   readAll() {
-    return this.read(this.length) || new Uint8Array();
+    if (this.length === 0) return new Uint8Array();
+    const size = this.length;
+    if (this.head === this.chunks.length - 1) {
+      const chunk = this.chunks[this.head].subarray(this.headOffset);
+      this.chunks = [];
+      this.length = 0;
+      this.head = 0;
+      this.headOffset = 0;
+      return chunk;
+    }
+    const out = this.peek(size) || new Uint8Array();
+    this.chunks = [];
+    this.length = 0;
+    this.head = 0;
+    this.headOffset = 0;
+    return out;
   }
 }
 
@@ -267,7 +314,11 @@ async function sha256(bytes) {
 }
 
 async function importHmacKey(key) {
-  return crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const cached = hmacKeyCache.get(key);
+  if (cached) return cached;
+  const imported = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  hmacKeyCache.set(key, imported);
+  return imported;
 }
 
 async function hmacSha256(key, data) {
@@ -277,7 +328,10 @@ async function hmacSha256(key, data) {
 
 async function hkdfExpand(prk, info, length = 32) {
   const infoBytes = typeof info === "string" ? encoder.encode(info) : info;
-  const t1 = await hmacSha256(prk, Uint8Array.from([...infoBytes, 0x01]));
+  const data = new Uint8Array(infoBytes.length + 1);
+  data.set(infoBytes, 0);
+  data[infoBytes.length] = 0x01;
+  const t1 = await hmacSha256(prk, data);
   return t1.slice(0, length);
 }
 
@@ -479,10 +533,14 @@ export async function deriveX25519SharedSecret(privateKey, peerPublicRaw) {
 }
 
 export function concatChunks(chunks) {
-  const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  if (!chunks.length) return new Uint8Array();
+  if (chunks.length === 1) return chunks[0];
+  let total = 0;
+  for (let i = 0; i < chunks.length; i += 1) total += chunks[i].length;
   const out = new Uint8Array(total);
   let offset = 0;
-  for (const chunk of chunks) {
+  for (let i = 0; i < chunks.length; i += 1) {
+    const chunk = chunks[i];
     out.set(chunk, offset);
     offset += chunk.length;
   }
