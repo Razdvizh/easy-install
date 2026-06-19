@@ -2,6 +2,10 @@
 
 [English](#english) | [中文](#中文)
 
+Forked from https://github.com/SUDOKU-ASCII/easy-install
+readme has been updated only for english section.
+
+Many thanks to [@saba-futai](https://github.com/saba-futai)
 ---
 
 <a name="中文"></a>
@@ -10,7 +14,7 @@
 在你的 Linux 服务器上运行以下命令：
 
 ```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 ```
 
 Cloudflare Worker 入口部署请看：[README.worker.zh-CN.md](./README.worker.zh-CN.md)。如果用户没有 GitHub，也可以直接使用仓库里的单文件版 `cf-worker/dashboard/sudoku-worker.one.js` 粘贴到 Cloudflare Dashboard 的 Hello World Worker 中。Worker 管理页会先用 `cf.877774.xyz` 占位，页面加载后直接读取 `https://ip.164746.xyz/` 的第一个结果作为导出的 `server_address`。
@@ -171,55 +175,55 @@ Apple TV 版源码里的添加页提供 **Link** 和 **Manual** 两种方式；�
 
 ```bash
 # 自定义端口
-sudo SUDOKU_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 自定义回落地址
-sudo SUDOKU_FALLBACK="127.0.0.1:8080" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_FALLBACK="127.0.0.1:8080" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 关闭 Cloudflare 500 错误页回落站（将不会自动覆盖 SUDOKU_FALLBACK）
-sudo SUDOKU_CF_FALLBACK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_CF_FALLBACK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 自定义 Cloudflare 500 错误页回落站端口（优先 10232，失败再尝试 80）
-sudo SUDOKU_CF_FALLBACK_PORT=10232 SUDOKU_CF_FALLBACK_FALLBACK_PORT=80 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_CF_FALLBACK_PORT=10232 SUDOKU_CF_FALLBACK_FALLBACK_PORT=80 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 指定短链接/导出节点使用的域名或 IP（例如走 CDN 时用域名）
-sudo SERVER_IP="example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SERVER_IP="example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 指定 Mihomo HTTPS 订阅使用的域名（默认：SERVER_IP 为域名时直接使用，否则自动派生为 <ipv4>.sslip.io）
-sudo SUDOKU_SUBSCRIPTION_DOMAIN="sub.example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_DOMAIN="sub.example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Mihomo HTTPS 订阅默认监听 8443，也可以显式覆盖
-sudo SUDOKU_SUBSCRIPTION_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 指定订阅文件路径（默认随机）
-sudo SUDOKU_SUBSCRIPTION_PATH="subscription.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_PATH="subscription.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 指定节点名
-sudo SUDOKU_SUBSCRIPTION_NODE_NAME="sudoku-hk" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_NODE_NAME="sudoku-hk" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 如需覆盖内置模板，可显式传入自定义模板 URL
-sudo SUDOKU_SUBSCRIPTION_TEMPLATE_URL="https://example.com/my-template.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_TEMPLATE_URL="https://example.com/my-template.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 关闭 HTTP 掩码（直连 TCP）
-sudo SUDOKU_HTTP_MASK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 指定 HTTP 掩码模式（auto / stream / poll / legacy / ws）
-sudo SUDOKU_HTTP_MASK_MODE=poll bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK_MODE=poll bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 开启 tunnel 模式 HTTPS（v0.1.4 起不再按端口自动推断 TLS）
-sudo SUDOKU_HTTP_MASK_TLS=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK_TLS=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # HTTP mask/tunnel 路径前缀（一级路径；默认随机 6-10 位小写字母，例如 aabbcc => /aabbcc/session /aabbcc/stream）
-sudo SUDOKU_HTTP_MASK_PATH_ROOT=aabbcc bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK_PATH_ROOT=aabbcc bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # 使用 sudoku-sing-box 直接监听 Sudoku 入站，并让代理出站全部通过 Cloudflare WARP（自动安装 sudoku-sing-box、注册 WARP；无需 TUN/iptables）
-sudo SUDOKU_WARP=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_WARP=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 ```
 
 ### 卸载
 
 ```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)" -- --uninstall
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)" -- --uninstall
 ```
 
 ### 更新内核
@@ -312,7 +316,7 @@ sudo systemctl stop sudoku
 Run on your Linux server:
 
 ```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 ```
 
 ---
@@ -461,7 +465,7 @@ Open Sudodroid and import nodes using one of these methods:
 | Mode | `up_ascii_down_entropy` |
 | AEAD | `chacha20-poly1305` |
 | X/P/V Table | Random `custom_table` |
-| Pure Sudoku Downlink | `false` (bandwidth optimized) |
+| Pure Sudoku Downlink | `true` |
 | HTTP Mask | `true` (`auto`) |
 | WARP Egress | `false` |
 
@@ -469,55 +473,55 @@ Open Sudodroid and import nodes using one of these methods:
 
 ```bash
 # Custom port
-sudo SUDOKU_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Custom fallback
-sudo SUDOKU_FALLBACK="127.0.0.1:8080" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_FALLBACK="127.0.0.1:8080" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Disable Cloudflare 500 fallback page service (will not override SUDOKU_FALLBACK)
-sudo SUDOKU_CF_FALLBACK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_CF_FALLBACK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Customize Cloudflare 500 fallback page ports (try 10232 first, then 80)
-sudo SUDOKU_CF_FALLBACK_PORT=10232 SUDOKU_CF_FALLBACK_FALLBACK_PORT=80 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_CF_FALLBACK_PORT=10232 SUDOKU_CF_FALLBACK_FALLBACK_PORT=80 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Override advertised host (domain/IP) used in short link and exported Sudoku node (use a domain for CDN)
-sudo SERVER_IP="example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SERVER_IP="example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Override HTTPS subscription domain (default: use SERVER_IP when it is a domain, otherwise derive <ipv4>.sslip.io)
-sudo SUDOKU_SUBSCRIPTION_DOMAIN="sub.example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_DOMAIN="sub.example.com" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # HTTPS subscription listens on 8443 by default
-sudo SUDOKU_SUBSCRIPTION_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_PORT=8443 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Override subscription path
-sudo SUDOKU_SUBSCRIPTION_PATH="subscription.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_PATH="subscription.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Override exported node name inside the generated Mihomo profile
-sudo SUDOKU_SUBSCRIPTION_NODE_NAME="sudoku-hk" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_NODE_NAME="sudoku-hk" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Override the built-in template with your own remote YAML
-sudo SUDOKU_SUBSCRIPTION_TEMPLATE_URL="https://example.com/my-template.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_SUBSCRIPTION_TEMPLATE_URL="https://example.com/my-template.yaml" bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Disable HTTP mask (raw TCP)
-sudo SUDOKU_HTTP_MASK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK=false bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # HTTP mask mode (auto / stream / poll / legacy / ws)
-sudo SUDOKU_HTTP_MASK_MODE=poll bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK_MODE=poll bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Enable HTTPS in tunnel modes (since v0.1.4, no port-based TLS inference)
-sudo SUDOKU_HTTP_MASK_TLS=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK_TLS=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # HTTP mask/tunnel path root (single segment; default is random 6-10 lowercase letters, e.g. aabbcc => /aabbcc/session /aabbcc/stream)
-sudo SUDOKU_HTTP_MASK_PATH_ROOT=aabbcc bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_HTTP_MASK_PATH_ROOT=aabbcc bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 
 # Serve the Sudoku inbound with sudoku-sing-box and route all proxied traffic through Cloudflare WARP (auto-installs sudoku-sing-box and registers WARP; no TUN/iptables)
-sudo SUDOKU_WARP=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+sudo SUDOKU_WARP=true bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 ```
 
 ### Uninstall
 
 ```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)" -- --uninstall
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)" -- --uninstall
 ```
 
 ### Update

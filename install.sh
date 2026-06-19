@@ -4,9 +4,9 @@
 # https://github.com/SUDOKU-ASCII/sudoku
 #
 # Usage:
-#   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)"
+#   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)"
 # Uninstall:
-#   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)" -- --uninstall
+#   sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)" -- --uninstall
 #
 # Environment Variables:
 #   SUDOKU_PORT      - Server port (default: random available port in 50001-65535)
