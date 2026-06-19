@@ -6,6 +6,7 @@ Forked from https://github.com/SUDOKU-ASCII/easy-install
 readme has been updated only for english section.
 
 Many thanks to [@saba-futai](https://github.com/saba-futai)
+
 ---
 
 <a name="中文"></a>
