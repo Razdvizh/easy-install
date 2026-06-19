@@ -13,6 +13,7 @@
 #   SUDOKU_CLIENT_PORT - Client local proxy port used in exported short link (default: 10233)
 #   SUDOKU_FALLBACK  - Fallback address (default: 127.0.0.1:80)
 #   SUDOKU_CF_FALLBACK - Enable CF 500 error page fallback service (default: true)
+#   SUDOKU_ENABLE_PURE_DOWNLINK - Enable pure downlink (default: true)
 #   SUDOKU_CF_FALLBACK_BIND - Bind address for CF fallback service (default: 127.0.0.1)
 #   SUDOKU_CF_FALLBACK_PORT - Preferred port for CF fallback service (default: 10232)
 #   SUDOKU_CF_FALLBACK_FALLBACK_PORT - Port to try when preferred port fails (default: 80)
@@ -46,6 +47,7 @@ DEFAULT_SUDOKU_FALLBACK="127.0.0.1:80"
 SUDOKU_FALLBACK="${SUDOKU_FALLBACK:-${DEFAULT_SUDOKU_FALLBACK}}"
 SUDOKU_REPO="${SUDOKU_REPO:-SUDOKU-ASCII/sudoku}"
 SUDOKU_CF_FALLBACK="${SUDOKU_CF_FALLBACK:-true}"
+SUDOKU_ENABLE_PURE_DOWNLINK="${SUDOKU_ENABLE_PURE_DOWNLINK:-true}"
 SUDOKU_CF_FALLBACK_BIND="${SUDOKU_CF_FALLBACK_BIND:-127.0.0.1}"
 SUDOKU_CF_FALLBACK_PORT="${SUDOKU_CF_FALLBACK_PORT:-10232}"
 SUDOKU_CF_FALLBACK_FALLBACK_PORT="${SUDOKU_CF_FALLBACK_FALLBACK_PORT:-80}"
@@ -1699,7 +1701,7 @@ create_config() {
   "padding_min": 2,
   "padding_max": 7,
   "custom_table": "${CUSTOM_TABLE}",
-  "enable_pure_downlink": false,
+  "enable_pure_downlink": ${SUDOKU_ENABLE_PURE_DOWNLINK},
   "httpmask": {
     "disable": ${DISABLE_HTTP_MASK},
     "mode": "${HTTP_MASK_MODE}",
@@ -1827,6 +1829,7 @@ write_sing_box_warp_config() {
         "${HTTP_MASK_TLS}" \
         "${HTTP_MASK_HOST}" \
         "${HTTP_MASK_PATH_ROOT}" \
+		"${SUDOKU_ENABLE_PURE_DOWNLINK}" \
         "${HTTP_MASK_MULTIPLEX}" << 'PY'
 import json
 import sys
@@ -1844,7 +1847,8 @@ httpmask_mode = sys.argv[9]
 httpmask_tls = sys.argv[10].lower() == "true"
 httpmask_host = sys.argv[11]
 httpmask_path_root = sys.argv[12]
-httpmask_multiplex = sys.argv[13]
+sudoku_pure_downlink = sys.argv[13]
+httpmask_multiplex = sys.argv[14]
 
 sections = {}
 section = None
@@ -1904,7 +1908,7 @@ sudoku_inbound = {
     "ascii": ascii_mode,
     "padding_min": 2,
     "padding_max": 7,
-    "enable_pure_downlink": False,
+    "enable_pure_downlink": sudoku_pure_downlink,
     "fallback_address": fallback_address,
     "suspicious_action": "fallback",
     "httpmask": {
@@ -2153,7 +2157,7 @@ generate_short_link() {
   "padding_min": 5,
   "padding_max": 15,
   "custom_table": "${CUSTOM_TABLE}",
-  "enable_pure_downlink": false,
+  "enable_pure_downlink": ${SUDOKU_ENABLE_PURE_DOWNLINK},
   "httpmask": {
     "disable": ${DISABLE_HTTP_MASK},
     "mode": "${CLIENT_HTTP_MASK_MODE}",
@@ -2346,7 +2350,7 @@ generate_subscription_config() {
                 printf '      path-root: "%s"\n' "${path_root_escaped}"
             fi
         fi
-        echo "    enable-pure-downlink: false"
+        printf '    enable-pure-downlink: %s\n' "${SUDOKU_ENABLE_PURE_DOWNLINK}"
         echo ""
         echo "proxy-groups:"
         echo "  - name: Proxy"
