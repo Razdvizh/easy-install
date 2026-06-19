@@ -2993,7 +2993,7 @@ print_results() {
     fi
 
     echo -e "${CYAN}${BOLD}🧹 Uninstall:${NC}"
-    printf '  %b%s%b\n' "${YELLOW}" 'sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/SUDOKU-ASCII/easy-install/main/install.sh)" -- --uninstall' "${NC}"
+    printf '  %b%s%b\n' "${YELLOW}" 'sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Razdvizh/easy-install/main/install.sh)" -- --uninstall' "${NC}"
     echo ""
 }
 
